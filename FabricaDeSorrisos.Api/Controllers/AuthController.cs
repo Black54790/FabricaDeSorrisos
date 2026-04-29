@@ -95,7 +95,6 @@ namespace FabricaDeSorrisos.Api.Controllers.Auth
             {
                 NomeCompleto = request.Nome,
                 Email = request.Email,
-                Cpf = "00000000000",
                 IdentityUserId = user.Id,
                 TipoUsuarioId = tipo.Id
             };

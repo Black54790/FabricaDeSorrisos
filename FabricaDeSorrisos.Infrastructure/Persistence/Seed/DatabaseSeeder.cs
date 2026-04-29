@@ -63,7 +63,7 @@ public static class DatabaseSeeder
                 var tipo = await context.TiposUsuarios.FirstOrDefaultAsync(t => t.Nome == seedUser.TipoUsuarioNome);
                 if (tipo != null)
                 {
-                    context.UsuariosDoSistema.Add(new Usuario { NomeCompleto = seedUser.NomeCompleto, Email = seedUser.Email, Cpf = "00000000000", IdentityUserId = user.Id, TipoUsuario = tipo });
+                    context.UsuariosDoSistema.Add(new Usuario { NomeCompleto = seedUser.NomeCompleto, Email = seedUser.Email, Cpf = string.Empty, IdentityUserId = user.Id, TipoUsuario = tipo });
                     await context.SaveChangesAsync();
                 }
             }

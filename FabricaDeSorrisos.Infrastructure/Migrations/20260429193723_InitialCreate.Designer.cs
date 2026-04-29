@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FabricaDeSorrisos.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260212171336_AjustePendente")]
-    partial class AjustePendente
+    [Migration("20260429193723_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -168,6 +168,12 @@ namespace FabricaDeSorrisos.Infrastructure.Migrations
 
                     b.Property<DateTime>("DataComentario")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataResposta")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Resposta")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Texto")
                         .IsRequired()
@@ -372,6 +378,10 @@ namespace FabricaDeSorrisos.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Cpf")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -420,10 +430,6 @@ namespace FabricaDeSorrisos.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NomeCompleto")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)

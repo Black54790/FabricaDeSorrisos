@@ -1,6 +1,7 @@
 ﻿const API_URL = "/api/Suporte";
 let currentUser = null;
 let abaAtual = "pendente";
+let isLoadingConversas = false;   // <-- trava contra requisições simultâneas
 
 function mudarAba(status) {
     abaAtual = status;
@@ -18,10 +19,16 @@ function mudarAba(status) {
 
     currentUser = null;
     esconderChat();
-    carregarUsuarios();
+    carregarUsuariosSeguro();   // alterado
 }
 
-// ... (carregarUsuarios mantém igual) ...
+// Wrapper que impede requisições simultâneas
+async function carregarUsuariosSeguro() {
+    if (isLoadingConversas) return;
+    isLoadingConversas = true;
+    await carregarUsuarios();
+    isLoadingConversas = false;
+}
 
 async function carregarUsuarios() {
     const lista = document.getElementById("listaUsuarios");
@@ -73,15 +80,14 @@ async function abrirChatAdmin(userId, nomeUsuario) {
         document.getElementById("nomeUsuarioChat").innerText = nomeUsuario;
     }
 
-    // --- LÓGICA DO STATUS E BOTÃO DE ENCERRAR ---
     const statusLabel = document.getElementById("statusAtendimento");
     const btnEncerrar = document.querySelector("button[onclick='encerrarAtendimento()']");
 
     if (abaAtual === 'encerrado') {
         statusLabel.innerText = "Atendimento Finalizado";
         statusLabel.className = "text-danger fw-bold";
-        if (btnEncerrar) btnEncerrar.classList.add("d-none"); // Esconde botão se já encerrou
-        document.getElementById("adminChatInput").classList.add("d-none"); // Bloqueia digitação (opcional)
+        if (btnEncerrar) btnEncerrar.classList.add("d-none");
+        document.getElementById("adminChatInput").classList.add("d-none");
     } else {
         statusLabel.innerText = "Atendimento em andamento";
         statusLabel.className = "text-success fw-bold";
@@ -89,7 +95,7 @@ async function abrirChatAdmin(userId, nomeUsuario) {
         document.getElementById("adminChatInput").classList.remove("d-none");
     }
 
-    carregarUsuarios();
+    carregarUsuariosSeguro();   // atualiza destaque
 
     try {
         const resp = await fetch(`${API_URL}/historico?targetUserId=${userId}`);
@@ -100,7 +106,6 @@ async function abrirChatAdmin(userId, nomeUsuario) {
     } catch (e) { console.error(e); }
 }
 
-// ... (Resto das funções enviarResposta, encerrarAtendimento, renderizarMensagensAdmin iguais) ...
 function renderizarMensagensAdmin(lista) {
     const body = document.getElementById("adminChatBody");
     body.innerHTML = "";
@@ -108,7 +113,11 @@ function renderizarMensagensAdmin(lista) {
         body.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted small">Nenhuma mensagem.</div>';
         return;
     }
-    lista.forEach(m => {
+
+    // Renderiza apenas as últimas 50 mensagens para evitar travamento
+    const ultimas = lista.slice(-50);
+
+    ultimas.forEach(m => {
         const divRow = document.createElement("div");
         divRow.className = m.respondidoPorAdmin ? "d-flex justify-content-end mb-3" : "d-flex justify-content-start mb-3";
         const balao = document.createElement("div");
@@ -141,7 +150,7 @@ async function enviarResposta(e) {
         if (resp.ok) {
             input.value = "";
             abrirChatAdmin(currentUser);
-            carregarUsuarios();
+            carregarUsuariosSeguro();
         }
     } catch (e) { console.error("Erro envio:", e); }
 }
@@ -158,7 +167,7 @@ async function encerrarAtendimento() {
         if (resp.ok) {
             esconderChat();
             currentUser = null;
-            carregarUsuarios();
+            carregarUsuariosSeguro();
         }
     } catch (e) { console.error("Erro encerrar:", e); }
 }
@@ -169,10 +178,11 @@ function esconderChat() {
     document.getElementById("adminChatInput").classList.add("d-none");
 }
 
+// Ajuste principal: polling a cada 10s (era 5s) e proteção contra requisições simultâneas
 document.addEventListener("DOMContentLoaded", () => {
-    carregarUsuarios();
+    carregarUsuariosSeguro();
     setInterval(() => {
-        if (currentUser) abrirChatAdmin(currentUser); // Atualiza chat aberto
-        else carregarUsuarios(); // Atualiza lista se ninguém selecionado
-    }, 5000);
+        if (currentUser) abrirChatAdmin(currentUser);
+        else carregarUsuariosSeguro();
+    }, 10000);   // <-- antes 5000
 });

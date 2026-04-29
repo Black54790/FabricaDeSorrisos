@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FabricaDeSorrisos.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class BancoNovo : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -429,6 +429,8 @@ namespace FabricaDeSorrisos.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Texto = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DataComentario = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Resposta = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DataResposta = table.Column<DateTime>(type: "datetime2", nullable: true),
                     BrinquedoId = table.Column<int>(type: "int", nullable: false),
                     UsuarioId = table.Column<int>(type: "int", nullable: false)
                 },

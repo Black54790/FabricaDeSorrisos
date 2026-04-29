@@ -1,9 +1,8 @@
-﻿// Localizado em wwwroot/js/chat.js no projeto WEB
-const API_URL = "/api/Suporte";
+﻿const API_URL = "/api/Suporte";
 
 var chatAberto = false;
 var intervaloAtualizacao = null;
-var intervaloNotificacao = null; // Variável para controlar o poll de notificações
+var isLoadingMensagens = false;   // <-- trava contra requisições simultâneas
 
 function toggleChat() {
     var janela = document.getElementById("janelaChat");
@@ -25,21 +24,29 @@ function toggleChat() {
         // Esconde o badge imediatamente
         if (badge) badge.classList.add("d-none");
 
-        // Carrega mensagens e marca como lidas (no localStorage)
-        carregarMensagens();
+        // Carrega mensagens e marca como lidas
+        carregarMensagensSeguro();
         atualizarContadorLidas();
 
-        // Atualiza o chat a cada 5 segundos enquanto estiver aberto
+        // Atualiza o chat a cada 10 segundos (reduz carga no servidor)
         intervaloAtualizacao = setInterval(() => {
-            carregarMensagens();
-            atualizarContadorLidas(); // Mantém o contador sincronizado enquanto lê
-        }, 5000);
+            carregarMensagensSeguro();
+            atualizarContadorLidas();
+        }, 10000);   // <-- antes era 5000
 
         setTimeout(() => {
             const input = document.getElementById("msgInput");
             if (input) input.focus();
         }, 100);
     }
+}
+
+// Wrapper que impede requisições simultâneas
+async function carregarMensagensSeguro() {
+    if (isLoadingMensagens) return;
+    isLoadingMensagens = true;
+    await carregarMensagens();
+    isLoadingMensagens = false;
 }
 
 async function carregarMensagens() {
@@ -70,7 +77,10 @@ function renderizarMensagens(lista) {
         return;
     }
 
-    lista.forEach(msg => {
+    // Renderiza apenas as últimas 50 mensagens para evitar travamento
+    const ultimas = lista.slice(-50);
+
+    ultimas.forEach(msg => {
         const isAdmin = msg.respondidoPorAdmin;
 
         const divRow = document.createElement("div");
@@ -117,8 +127,8 @@ async function enviarMensagem(e) {
         });
 
         if (response.ok) {
-            carregarMensagens();
-            // Ao enviar, atualizamos o contador também para não notificar a própria ação (embora o back filtre)
+            // Recarrega o chat e atualiza contador (sem sobrecarregar)
+            await carregarMensagensSeguro();
             atualizarContadorLidas();
         } else {
             console.error("Falha ao enviar mensagem.");
@@ -140,10 +150,7 @@ async function verificarNotificacoes() {
         if (response.ok) {
             const totalAdminNoServer = await response.json();
 
-            // Pega quantas mensagens o usuário já leu anteriormente
             const lidasLocal = parseInt(localStorage.getItem('msgsAdminLidas') || '0');
-
-            // Se tiver mais mensagens no servidor do que o usuário leu, mostra badge
             const naoLidas = totalAdminNoServer - lidasLocal;
 
             const badge = document.getElementById("chatBadge");
@@ -151,20 +158,18 @@ async function verificarNotificacoes() {
                 if (naoLidas > 0) {
                     badge.innerText = naoLidas;
                     badge.classList.remove("d-none");
-                    badge.classList.add("animate__animated", "animate__bounceIn"); // Efeito opcional se usar Animate.css
+                    badge.classList.add("animate__animated", "animate__bounceIn");
                 } else {
                     badge.classList.add("d-none");
                 }
             }
         }
     } catch (e) {
-        // Silencia erro de conexão para não poluir console do cliente
+        // Silencia erro
     }
 }
 
 async function atualizarContadorLidas() {
-    // Chama o servidor para saber o total atual e salva no LocalStorage
-    // Assim sabemos que o usuário "viu" tudo até agora
     try {
         const response = await fetch(`${API_URL}/notificacoes`);
         if (response.ok) {
@@ -174,9 +179,8 @@ async function atualizarContadorLidas() {
     } catch (e) { }
 }
 
-// Inicia o sistema de notificação assim que o site carrega
+// Inicia as notificações (verifica a cada 15 segundos para aliviar o servidor)
 document.addEventListener("DOMContentLoaded", () => {
     verificarNotificacoes();
-    // Verifica a cada 10 segundos
-    intervaloNotificacao = setInterval(verificarNotificacoes, 10000);
+    setInterval(verificarNotificacoes, 15000);   // <-- antes 10000
 });
